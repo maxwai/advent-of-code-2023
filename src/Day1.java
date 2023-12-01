@@ -26,60 +26,14 @@ public class Day1 {
     }
 
     public static int part2(Stream<String> lines) {
-        return part1(lines.map(line -> {
-            boolean changed;
-            do {
-                changed = false;
-                for (int i = 0; i < line.length(); i++) {
-                    if (line.startsWith("one", i)) {
-                        line = line.replace("one", "o1e");
-                        changed = true;
-                        break;
-                    }
-                    if (line.startsWith("two", i)) {
-                        line = line.replace("two", "t2o");
-                        changed = true;
-                        break;
-                    }
-                    if (line.startsWith("three", i)) {
-                        line = line.replace("three", "t3e");
-                        changed = true;
-                        break;
-                    }
-                    if (line.startsWith("four", i)) {
-                        line = line.replace("four", "f4r");
-                        changed = true;
-                        break;
-                    }
-                    if (line.startsWith("five", i)) {
-                        line = line.replace("five", "f5e");
-                        changed = true;
-                        break;
-                    }
-                    if (line.startsWith("six", i)) {
-                        line = line.replace("six", "s6x");
-                        changed = true;
-                        break;
-                    }
-                    if (line.startsWith("seven", i)) {
-                        line = line.replace("seven", "s7n");
-                        changed = true;
-                        break;
-                    }
-                    if (line.startsWith("eight", i)) {
-                        line = line.replace("eight", "e8t");
-                        changed = true;
-                        break;
-                    }
-                    if (line.startsWith("nine", i)) {
-                        line = line.replace("nine", "n9e");
-                        changed = true;
-                        break;
-                    }
-
-                }
-            } while (changed);
-            return line;
-        }));
+        return part1(lines.map(line -> line.replaceAll("one", "o1e")
+                .replaceAll("two", "t2o")
+                .replaceAll("three", "t3e")
+                .replaceAll("four", "f4r")
+                .replaceAll("five", "f5e")
+                .replaceAll("six", "s6x")
+                .replaceAll("seven", "s7n")
+                .replaceAll("eight", "e8t")
+                .replaceAll("nine", "n9e")));
     }
 }
