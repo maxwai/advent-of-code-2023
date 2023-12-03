@@ -35,7 +35,12 @@ public class Day3 {
                     while (z + 1 < lines.get(i).size() && Character.isDigit(lines.get(i).get(z + 1))) {
                         z++;
                     }
-                    int partNumber = Integer.parseInt(lines.get(i).stream().skip(j).limit(z - j + 1).map(String::valueOf).reduce("", (character, character2) -> character + character2));
+                    int partNumber = Integer.parseInt(lines.get(i)
+                            .stream()
+                            .skip(j)
+                            .limit(z - j + 1)
+                            .map(String::valueOf)
+                            .reduce("", (character, character2) -> character + character2));
                     outerLoop:
                     for (int x = i == 0 ? i : i - 1; x <= i + 1 && x < lines.size(); x++) {
                         for (int y = j == 0 ? j : j - 1; y <= z + 1 && y < lines.get(x).size(); y++) {
@@ -52,8 +57,42 @@ public class Day3 {
         return sum;
     }
 
-
     public static int part2(List<List<Character>> lines) {
-        return 0;
+        int sum = 0;
+        for (int i = 0; i < lines.size(); i++) {
+            for (int j = 0; j < lines.get(i).size(); j++) {
+                if (lines.get(i).get(j) == '*') {
+                    int gearRatio = 1;
+                    int amount = 0;
+                    for (int x = i == 0 ? i : i - 1; x <= i + 1 && x < lines.size(); x++) {
+                        for (int y = j == 0 ? j : j - 1; y <= j + 1 && y < lines.get(x).size(); y++) {
+                            if (Character.isDigit(lines.get(x).get(y))) {
+                                amount++;
+                                int startIndex = y;
+                                while (startIndex - 1 >= 0 && Character.isDigit(lines.get(x).get(startIndex - 1))) {
+                                    startIndex--;
+                                }
+                                int endIndex = y;
+                                while (endIndex + 1 < lines.get(x).size() && Character.isDigit(lines.get(x).get(endIndex + 1))) {
+                                    endIndex++;
+                                }
+                                int partNumber = Integer.parseInt(lines.get(x)
+                                        .stream()
+                                        .skip(startIndex)
+                                        .limit(endIndex - startIndex + 1)
+                                        .map(String::valueOf)
+                                        .reduce("", (character, character2) -> character + character2));
+                                gearRatio *= partNumber;
+                                y = endIndex;
+                            }
+                        }
+                    }
+                    if (amount == 2) {
+                        sum += gearRatio;
+                    }
+                }
+            }
+        }
+        return sum;
     }
 }
