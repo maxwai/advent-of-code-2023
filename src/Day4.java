@@ -40,12 +40,12 @@ public class Day4 {
     public static int part1(List<List<List<Integer>>> cards) {
         AtomicInteger sum = new AtomicInteger();
         cards.forEach(numbers -> {
-            List<Integer> winningNumbers = numbers.get(1)
+            long winningNumbers = numbers.get(1)
                     .stream()
                     .filter(numbers.get(0)::contains)
-                    .toList();
-            if (!winningNumbers.isEmpty()) {
-                sum.addAndGet((int) Math.pow(2, winningNumbers.size() - 1));
+                    .count();
+            if (winningNumbers != 0) {
+                sum.addAndGet((int) Math.pow(2, winningNumbers - 1));
             }
         });
 
@@ -59,11 +59,11 @@ public class Day4 {
             cardAmount.put(i, 1);
         }
         for (int i = 0; i < cards.size(); i++) {
-            List<Integer> winningNumbers = cards.get(i).get(1)
+            long winningNumbers = cards.get(i).get(1)
                     .stream()
                     .filter(cards.get(i).get(0)::contains)
-                    .toList();
-            for (int j = i + 1; j < i + 1 + winningNumbers.size() && j < cards.size(); j++) {
+                    .count();
+            for (int j = i + 1; j < i + 1 + winningNumbers && j < cards.size(); j++) {
                 cardAmount.put(j, cardAmount.get(j) + cardAmount.get(i));
             }
         }
