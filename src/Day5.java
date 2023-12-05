@@ -87,13 +87,6 @@ public class Day5 {
                 humidityToLocation);
     }
 
-    public static Stream<Range> mapToRange(Range initialRange, Map<Range, Range> map) {
-        return map.entrySet()
-                .stream()
-                .filter(entry -> entry.getKey().overlap(initialRange))
-                .map(Map.Entry::getValue);
-    }
-
     public static Range part1(List<Long> seeds, List<Map<Range, Range>> mappings) {
         return seeds.stream()
                 .flatMap(seed -> Range.mapRange(seed, mappings.get(0)).stream()).distinct()
