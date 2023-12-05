@@ -3,36 +3,63 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Day5 {
 
     public static void main(String[] args) throws IOException {
-        List<CustomMap> input;
+        List<Map<Range, Range>> input;
         try (BufferedReader reader = new BufferedReader(new FileReader("Day5-input.txt"))) {
             input = parseInput(reader.lines());
         }
-        System.out.println(part1(input));
-        System.out.println(part2(input));
+        List<Long> seeds;
+        try (BufferedReader reader = new BufferedReader(new FileReader("Day5-input.txt"))) {
+            seeds = parseSeeds(reader.lines());
+        }
+        System.out.println(part1(seeds, input).start); // 3374647
+        List<Range> seedRanges;
+        try (BufferedReader reader = new BufferedReader(new FileReader("Day5-input.txt"))) {
+            seedRanges = parseSeedRange(reader.lines());
+        }
+        System.out.println(part2(seedRanges, input).start);
     }
 
-    public static List<CustomMap> parseInput(Stream<String> lines) {
-        CustomMap seedToSoil = new CustomMap();
-        CustomMap soilToFertilizer = new CustomMap();
-        CustomMap fertilizerToWater = new CustomMap();
-        CustomMap waterToLight = new CustomMap();
-        CustomMap lightToTemperature = new CustomMap();
-        CustomMap temperatureToHumidity = new CustomMap();
-        CustomMap humidityToLocation = new CustomMap();
+    public static List<Long> parseSeeds(Stream<String> lines) {
+        return lines.filter(line -> line.startsWith("seeds:"))
+                .flatMap(line -> Arrays.stream(line.substring(7).split(" "))
+                        .map(Long::parseLong)
+                        .toList()
+                        .stream())
+                .collect(Collectors.toList());
+    }
 
-        AtomicReference<CustomMap> active = new AtomicReference<>();
-        List<Long> initialSeeds = new ArrayList<>();
+    public static List<Range> parseSeedRange(Stream<String> lines) {
+        List<Long> seeds = parseSeeds(lines);
+        List<Range> seedRange = new ArrayList<>();
+        for (int i = 0; i < seeds.size() - 1; i += 2) {
+            seedRange.add(new Range(seeds.get(i), seeds.get(i + 1)));
+        }
+        if (seeds.size() % 2 != 0) {
+            seedRange.add(new Range(seeds.get(seeds.size() - 1)));
+        }
+        return seedRange;
+    }
+
+    public static List<Map<Range, Range>> parseInput(Stream<String> lines) {
+        Map<Range, Range> seedToSoil = new HashMap<>();
+        Map<Range, Range> soilToFertilizer = new HashMap<>();
+        Map<Range, Range> fertilizerToWater = new HashMap<>();
+        Map<Range, Range> waterToLight = new HashMap<>();
+        Map<Range, Range> lightToTemperature = new HashMap<>();
+        Map<Range, Range> temperatureToHumidity = new HashMap<>();
+        Map<Range, Range> humidityToLocation = new HashMap<>();
+
+        AtomicReference<Map<Range, Range>> active = new AtomicReference<>();
 
         lines.forEach(line -> {
-            if (line.startsWith("seeds:")) {
-                initialSeeds.addAll(Arrays.stream(line.substring(7).split(" ")).map(Long::parseLong).toList());
+            if (line.startsWith("seeds:"))
                 return;
-            }
             switch (line) {
                 case "seed-to-soil map:" -> active.set(seedToSoil);
                 case "soil-to-fertilizer map:" -> active.set(soilToFertilizer);
@@ -45,12 +72,11 @@ public class Day5 {
                 }
                 default -> {
                     String[] numbers = line.split(" ");
-                    active.get().put(Long.parseLong(numbers[1]), Long.parseLong(numbers[0]), Integer.parseInt(numbers[2]));
+                    active.get().put(new Range(Long.parseLong(numbers[1]), Integer.parseInt(numbers[2])),
+                            new Range(Long.parseLong(numbers[0]), Integer.parseInt(numbers[2])));
                 }
             }
         });
-
-        seedToSoil.restrict(initialSeeds);
 
         return List.of(seedToSoil,
                 soilToFertilizer,
@@ -61,179 +87,128 @@ public class Day5 {
                 humidityToLocation);
     }
 
-    public static long part1(List<CustomMap> cards) {
-        return cards.get(0)
-                .values()
+    public static Stream<Range> mapToRange(Range initialRange, Map<Range, Range> map) {
+        return map.entrySet()
                 .stream()
-                .mapToLong(aLong -> cards.get(1).get(aLong))
-                .map(aLong -> cards.get(2).get(aLong))
-                .map(aLong -> cards.get(3).get(aLong))
-                .map(aLong -> cards.get(4).get(aLong))
-                .map(aLong -> cards.get(5).get(aLong))
-                .map(aLong -> cards.get(6).get(aLong))
-                .min()
-                .orElse(-1);
+                .filter(entry -> entry.getKey().overlap(initialRange))
+                .map(Map.Entry::getValue);
+    }
+
+    public static Range part1(List<Long> seeds, List<Map<Range, Range>> mappings) {
+        return seeds.stream()
+                .flatMap(seed -> Range.mapRange(seed, mappings.get(0)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(1)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(2)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(3)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(4)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(5)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(6)).stream()).distinct()
+                .min(Range::compareTo)
+                .orElse(null);
     }
 
 
-    public static int part2(List<CustomMap> cards) {
-        return 0;
+    public static Range part2(List<Range> seeds, List<Map<Range, Range>> mappings) {
+         return seeds.stream()
+                .flatMap(seed -> seed.mapRange(mappings.get(0)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(1)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(2)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(3)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(4)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(5)).stream()).distinct()
+                .flatMap(range -> range.mapRange(mappings.get(6)).stream()).distinct()
+                .min(Range::compareTo)
+                .orElse(null);
     }
 
-    public static class CustomMap implements Map<Long, Long> {
+    public static class Range implements Comparable<Range> {
 
-        private final Map<Long, Integer> sourceMap = new TreeMap<>();
-        private final Map<Long, Integer> destinationMap = new TreeMap<>();
-        private final Map<Long, Long> sourceDestinationMap = new TreeMap<>();
+        final long start;
+        final long stop;
 
-        public Entry<Long, Long> getEntry(Long key) {
-            for (Entry<Long, Integer> entry : sourceMap.entrySet()) {
-                if (entry.getKey() <= key && key < entry.getKey() + entry.getValue()) {
-                    return sourceDestinationMap.entrySet()
-                            .stream()
-                            .filter(entry1 -> entry1.getKey().equals(entry.getKey()))
-                            .findAny()
-                            .orElse(null);
-                }
+        public Range(long start, long stop, Object ignored) {
+            this.start = start;
+            this.stop = stop;
+            if (start < 0 || stop < 0)
+                System.err.println("Ranges are negative");
+        }
+
+        public Range(long start) {
+            this(start, start, null);
+        }
+
+        public Range(long start, long range) {
+            this(start, start + range - 1, null);
+        }
+
+        public static List<Range> mapRange(Long value, Map<Range, Range> mappings) {
+            return mappings.entrySet()
+                    .stream()
+                    .filter(entry -> entry.getKey().contains(value))
+                    .map(entry -> entry.getKey().reduce(value, entry.getValue()))
+                    .toList();
+        }
+
+        public List<Range> mapRange(Map<Range, Range> mappings) {
+            return mappings.entrySet()
+                    .stream()
+                    .filter(entry -> overlap(entry.getKey()))
+                    .map(entry -> reduce(entry.getKey(), entry.getValue()))
+                    .toList();
+        }
+
+        public Range reduce(Range compare, Range goal) {
+            if (!this.overlap(compare))
+                throw new IllegalStateException();
+            long start = goal.start;
+            long stop = goal.stop;
+            if (compare.start < this.start) {
+                start += this.start - compare.start;
             }
-            return null;
-        }
-
-        private boolean contains(Map<Long, Integer> map, Long key) {
-            for (Entry<Long, Integer> entry : map.entrySet()) {
-                if (entry.getKey() <= key && entry.getKey() + entry.getValue() > key)
-                    return true;
+            if (compare.stop > this.stop) {
+                stop -= compare.stop - this.stop;
             }
-            return false;
+            return new Range(start, stop, null);
         }
 
-        public void put(Long key, Long value, Integer range) {
-            sourceMap.put(key, range);
-            destinationMap.put(value, range);
-            sourceDestinationMap.put(key, value);
+        public Range reduce(Long original, Range goal) {
+            if (!this.contains(original))
+                throw new IllegalStateException();
+            return new Range(goal.start + original - this.start);
         }
 
-        @Override
-        public int size() {
-            return sourceMap.size();
+        public boolean overlap(Range range) {
+            return !(stop < range.start || start > range.stop);
         }
 
-        @Override
-        public boolean isEmpty() {
-            return sourceMap.isEmpty();
-        }
-
-        @Override
-        public boolean containsKey(Object key) {
-            if (key instanceof Long longKey)
-                return contains(sourceMap, longKey);
-            return false;
+        public boolean contains(Long value) {
+            return start <= value && value <= stop;
         }
 
         @Override
-        public boolean containsValue(Object value) {
-            if (value instanceof Long longValue)
-                return contains(destinationMap, longValue);
-            return false;
-        }
-
-        @Override
-        public Long get(Object key) {
-            if (key instanceof Long longKey) {
-                Entry<Long, Long> entry = getEntry(longKey);
-                return entry == null ? longKey : entry.getValue() + longKey - entry.getKey();
-            }
-            return null;
-        }
-
-        @Override
-        @Deprecated
-        public Long put(Long key, Long value) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Long remove(Object key) {
-            if (key instanceof Long longKey) {
-                Entry<Long, Long> entry = getEntry(longKey);
-                if (entry == null)
-                    return null;
-                sourceMap.remove(entry.getKey());
-                destinationMap.remove(entry.getValue());
-                sourceDestinationMap.remove(entry.getKey());
-                return entry.getValue();
-            }
-            return null;
-        }
-
-        @Override
-        @Deprecated
-        public void putAll(Map<? extends Long, ? extends Long> m) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void clear() {
-            sourceMap.clear();
-            destinationMap.clear();
-            sourceDestinationMap.clear();
-        }
-
-        public void restrict(List<Long> keys) {
-            Map<Long, Long> mappings = new HashMap<>();
-            Set<Long> realValues = new HashSet<>();
-
-            keys.forEach(key -> {
-                Entry<Long, Long> entry = getEntry(key);
-                if (entry == null)
-                    return;
-                long value = entry.getValue() + key - entry.getKey();
-                realValues.add(value);
-                sourceMap.put(key, 1);
-                destinationMap.put(value, 1);
-                mappings.put(key, value);
-            });
-
-            sourceMap.keySet().retainAll(keys);
-            destinationMap.keySet().retainAll(realValues);
-            sourceDestinationMap.clear();
-            sourceDestinationMap.putAll(mappings);
-        }
-
-        @Override
-        @Deprecated
-        public Set<Long> keySet() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Collection<Long> values() {
-            if (destinationMap.values().stream().anyMatch(i -> i != 1))
-                throw new UnsupportedOperationException();
-            return sourceDestinationMap.values();
-        }
-
-        @Override
-        public Set<Entry<Long, Long>> entrySet() {
-            if (sourceMap.values().stream().anyMatch(i -> i != 1))
-                throw new UnsupportedOperationException();
-            return sourceDestinationMap.entrySet();
+        public int compareTo(Range o) {
+            return Long.compare(start, o.start);
         }
 
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o instanceof CustomMap other) {
-                return sourceMap.equals(other.sourceMap)
-                       && destinationMap.equals(other.destinationMap)
-                       && sourceDestinationMap.equals(other.sourceDestinationMap);
+            if (o instanceof Range other) {
+                return start == other.start && stop == other.stop;
             }
             return false;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(sourceMap, destinationMap, sourceDestinationMap);
+            return Objects.hash(start, stop);
+        }
+
+        @Override
+        public String toString() {
+            if (start == stop)
+                return "[" + start + "]";
+            return "[" + start + ", " + stop + "] (" + (stop - start + 1) + " items)";
         }
     }
 
