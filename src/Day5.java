@@ -10,19 +10,17 @@ public class Day5 {
 
     public static void main(String[] args) throws IOException {
         List<Map<Range, Range>> input;
+        List<Long> seeds;
+        List<Range> seedRanges;
         try (BufferedReader reader = new BufferedReader(new FileReader("Day5-input.txt"))) {
             input = parseInput(reader.lines());
         }
-        List<Long> seeds;
         try (BufferedReader reader = new BufferedReader(new FileReader("Day5-input.txt"))) {
             seeds = parseSeeds(reader.lines());
         }
+        seedRanges = parseSeedRange(seeds);
         System.out.println(part1(seeds, input).start); // 3374647
-        List<Range> seedRanges;
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day5-input.txt"))) {
-            seedRanges = parseSeedRange(reader.lines());
-        }
-        System.out.println(part2(seedRanges, input).start);
+        System.out.println(part2(seedRanges, input).start); // 6082852
     }
 
     public static List<Long> parseSeeds(Stream<String> lines) {
@@ -34,8 +32,7 @@ public class Day5 {
                 .collect(Collectors.toList());
     }
 
-    public static List<Range> parseSeedRange(Stream<String> lines) {
-        List<Long> seeds = parseSeeds(lines);
+    public static List<Range> parseSeedRange(List<Long> seeds) {
         List<Range> seedRange = new ArrayList<>();
         for (int i = 0; i < seeds.size() - 1; i += 2) {
             seedRange.add(new Range(seeds.get(i), seeds.get(i + 1)));
@@ -88,30 +85,20 @@ public class Day5 {
     }
 
     public static Range part1(List<Long> seeds, List<Map<Range, Range>> mappings) {
-        return seeds.stream()
-                .flatMap(seed -> Range.mapRange(seed, mappings.get(0)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(1)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(2)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(3)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(4)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(5)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(6)).stream()).distinct()
-                .min(Range::compareTo)
-                .orElse(null);
+        Stream<Range> stream = seeds.stream().map(Range::new);
+        for (Map<Range, Range> mapping : mappings) {
+            stream = stream.flatMap(range -> range.mapRange(mapping).stream());
+        }
+        return stream.min(Range::compareTo).orElse(null);
     }
 
 
     public static Range part2(List<Range> seeds, List<Map<Range, Range>> mappings) {
-         return seeds.stream()
-                .flatMap(seed -> seed.mapRange(mappings.get(0)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(1)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(2)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(3)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(4)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(5)).stream()).distinct()
-                .flatMap(range -> range.mapRange(mappings.get(6)).stream()).distinct()
-                .min(Range::compareTo)
-                .orElse(null);
+        Stream<Range> stream = seeds.stream();
+        for (Map<Range, Range> mapping : mappings) {
+            stream = stream.flatMap(range -> range.mapRange(mapping).stream());
+        }
+        return stream.min(Range::compareTo).orElse(null);
     }
 
     public static class Range implements Comparable<Range> {
@@ -132,14 +119,6 @@ public class Day5 {
 
         public Range(long start, long range) {
             this(start, start + range - 1, null);
-        }
-
-        public static List<Range> mapRange(Long value, Map<Range, Range> mappings) {
-            return mappings.entrySet()
-                    .stream()
-                    .filter(entry -> entry.getKey().contains(value))
-                    .map(entry -> entry.getKey().reduce(value, entry.getValue()))
-                    .toList();
         }
 
         public List<Range> mapRange(Map<Range, Range> mappings) {
@@ -164,18 +143,8 @@ public class Day5 {
             return new Range(start, stop, null);
         }
 
-        public Range reduce(Long original, Range goal) {
-            if (!this.contains(original))
-                throw new IllegalStateException();
-            return new Range(goal.start + original - this.start);
-        }
-
         public boolean overlap(Range range) {
             return !(stop < range.start || start > range.stop);
-        }
-
-        public boolean contains(Long value) {
-            return start <= value && value <= stop;
         }
 
         @Override
