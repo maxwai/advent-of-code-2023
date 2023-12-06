@@ -1,9 +1,9 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
@@ -23,18 +23,14 @@ public class Day6 {
         List<Integer> times = new ArrayList<>();
         List<Integer> distances = new ArrayList<>();
         lines.forEach(line -> {
+            Stream<Integer> stream = Arrays.stream(line.split(":")[1].trim().split(" "))
+                    .filter(s -> !s.isEmpty())
+                    .map(String::trim)
+                    .map(Integer::parseInt);
             if (line.startsWith("Time:")) {
-                Arrays.stream(line.split(":")[1].trim().split(" "))
-                        .filter(s -> !s.isEmpty())
-                        .map(String::trim)
-                        .map(Integer::parseInt)
-                        .forEach(times::add);
+                stream.forEach(times::add);
             } else {
-                Arrays.stream(line.split(":")[1].trim().split(" "))
-                        .filter(s -> !s.isEmpty())
-                        .map(String::trim)
-                        .map(Integer::parseInt)
-                        .forEach(distances::add);
+                stream.forEach(distances::add);
             }
         });
         List<Integer[]> races = new ArrayList<>();
@@ -45,17 +41,12 @@ public class Day6 {
     }
 
     public static long part1(List<Integer[]> races) {
-        AtomicLong sum = new AtomicLong(1);
-        races.forEach(race -> {
-            long amount = IntStream.range(0, race[0] + 1)
-                    .filter(i -> i * (race[0] - i) > race[1])
-                    .count();
-            sum.set(sum.get() * amount);
-        });
-
-        return sum.get();
+        return races.stream()
+                .mapToLong(race -> IntStream.range(0, race[0] + 1)
+                        .filter(i -> i * (race[0] - i) > race[1])
+                        .count())
+                .reduce(1, (a, b) -> a * b);
     }
-
 
     public static long part2(List<Integer[]> races) {
         long time = Long.parseLong(races.stream()
@@ -67,7 +58,7 @@ public class Day6 {
                 .map(String::valueOf)
                 .reduce("", (s, s2) -> s + s2));
         return LongStream.range(0, time + 1)
-                    .filter(i -> i * (time - i) > distance)
-                    .count();
+                .filter(i -> i * (time - i) > distance)
+                .count();
     }
 }
