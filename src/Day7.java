@@ -35,7 +35,13 @@ public class Day7 {
     }
 
     public static long part2(List<Hand> hands) {
-        return 0;
+        hands.forEach(Hand::joker);
+        hands.sort(null);
+        long sum = 0;
+        for (int i = 0; i < hands.size(); i++) {
+            sum += (long) (i + 1) * hands.get(i).bid;
+        }
+        return sum;
     }
 
     public static class Hand implements Comparable<Hand> {
@@ -43,6 +49,8 @@ public class Day7 {
         public final char card1, card2, card3, card4, card5;
         public final int bid;
         public final Map<Character, Integer> cardAmounts = new HashMap<>();
+        public int jokerValue = 11;
+        public int jokers = -1;
 
         public Hand(char card1, char card2, char card3, char card4, char card5, int bid) {
             this.card1 = card1;
@@ -58,28 +66,48 @@ public class Day7 {
             cardAmounts.put(card5, cardAmounts.getOrDefault(card5, 0) + 1);
         }
 
-        public static Comparator<Character> compareCard() {
-            Map<Character, Integer> cardMappings = new HashMap<>(Map.of('2', 2, '3', 3, '4', 4, '5', 5, '6', 6, '7', 7, '8', 8, '9', 9, 'T', 10, 'J', 11));
+        public Comparator<Character> compareCard() {
+            Map<Character, Integer> cardMappings = new HashMap<>(Map.of('2', 2, '3', 3, '4', 4, '5', 5, '6', 6, '7', 7, '8', 8, '9', 9, 'T', 10, 'J', jokerValue));
             cardMappings.put('Q', 12);
             cardMappings.put('K', 13);
             cardMappings.put('A', 14);
             return Comparator.comparingInt(cardMappings::get);
         }
 
+        public void joker() {
+            jokerValue = 1;
+            jokers = cardAmounts.getOrDefault('J', -1);
+            cardAmounts.remove('J');
+        }
+
         public int type() {
-            if (cardAmounts.containsValue(5)) {
+            if (cardAmounts.containsValue(5) ||
+                (cardAmounts.containsValue(4) && jokers == 1) ||
+                (cardAmounts.containsValue(3) && jokers == 2) ||
+                (cardAmounts.containsValue(2) && jokers == 3) ||
+                (cardAmounts.containsValue(1) && jokers == 4) ||
+                jokers == 5) { // Five of a kind
                 return 7;
-            } else if (cardAmounts.containsValue(4)) {
+            } else if (cardAmounts.containsValue(4) ||
+                       (cardAmounts.containsValue(3) && jokers == 1) ||
+                       (cardAmounts.containsValue(2) && jokers == 2) ||
+                       (cardAmounts.containsValue(1) && jokers == 3)) { // Four of a kind
                 return 6;
-            } else if (cardAmounts.containsValue(3) && cardAmounts.containsValue(2)) {
+            } else if ((cardAmounts.containsValue(3) && cardAmounts.containsValue(2)) ||
+                       (cardAmounts.values().stream().filter(x -> x == 2).count() == 2 && jokers == 1) ||
+                       (cardAmounts.containsValue(2) && cardAmounts.containsValue(1) && jokers == 2)) { // Full house
                 return 5;
-            } else if (cardAmounts.containsValue(3)) {
+            } else if (cardAmounts.containsValue(3) ||
+                       (cardAmounts.containsValue(2) && jokers == 1) ||
+                       (cardAmounts.containsValue(1) && jokers == 2)) { // Three of a kind
                 return 4;
-            } else if (cardAmounts.values().stream().filter(x -> x == 2).count() == 2) {
+            } else if (cardAmounts.values().stream().filter(x -> x == 2).count() == 2 ||
+                       (cardAmounts.containsValue(2) && cardAmounts.containsValue(1) && jokers == 1)) { // Two pairs
                 return 3;
-            } else if (cardAmounts.containsValue(2)) {
+            } else if (cardAmounts.containsValue(2) ||
+                       (cardAmounts.containsValue(1) && jokers == 1)) { // One pair
                 return 2;
-            } else {
+            } else { // High card
                 return 1;
             }
         }
