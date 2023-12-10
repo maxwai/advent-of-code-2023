@@ -1,6 +1,5 @@
 import java.io.*;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -11,8 +10,10 @@ public class Day10 {
         try (BufferedReader reader = new BufferedReader(new FileReader("Day10-input.txt"))) {
             input = parseInput(reader.lines());
         }
-        System.out.println(part1(input));
-        System.out.println(part2(input));
+        // 6738 & 579
+        Part1Result part1 = part1(input);
+        System.out.println(part1.answer);
+        System.out.println(part2(part1.loop));
     }
 
     public static List<Tile> parseInput(Stream<String> lines) {
@@ -20,173 +21,103 @@ public class Day10 {
         lines.forEach(line -> pipes.add(new ArrayList<>(Arrays.asList(line.split("")))));
 
         List<Tile> tiles = new ArrayList<>();
+        Map<Coords, Tile> tileMap = new HashMap<>();
         for (int i = 0; i < pipes.size(); i++) {
             for (int j = 0; j < pipes.get(i).size(); j++) {
                 if (pipes.get(i).get(j).equals(".")) {
                     continue;
                 }
-                tiles.add(new Tile(i, j, pipes.get(i).get(j)));
+                Tile tile = new Tile(i, j, pipes.get(i).get(j));
+                tiles.add(tile);
+                tileMap.put(new Coords(i, j), tile);
             }
         }
+
+        tiles.forEach(tile -> tile.initializeConnections(tileMap));
         return tiles;
     }
 
-    public static long part1(List<Tile> tiles) {
-
-        Tile startingTile = tiles.stream()
-                .filter(tile -> tile.pipeDirection == PipeDirection.START)
-                .findAny()
-                .orElseThrow();
-
-        Set<WalkResult> currentTiles = new HashSet<>();
-
-        for (Direction direction : Direction.values()) {
-            try {
-                WalkResult tmpTile = startingTile.getNext(direction, tiles);
-                if (tmpTile.newTile.getPrevious(tmpTile.direction, tiles).equals(startingTile)) {
-                    currentTiles.add(tmpTile);
-                }
-            } catch (NoSuchElementException | IllegalStateException ignored) {
-            }
-        }
-        if (currentTiles.size() != 2) {
-            throw new IllegalStateException();
-        }
-
-        int position = 1;
-        do {
-            currentTiles = currentTiles.stream()
-                    .map(walkResult -> walkResult.newTile.getNext(walkResult.direction, tiles))
-                    .collect(Collectors.toSet());
-            position++;
-        } while (currentTiles.size() == 2);
-        return position;
-    }
-
-    public static long part2(List<Tile> tiles) {
+    public static Part1Result part1(List<Tile> tiles) {
         Set<Tile> loopTiles = new HashSet<>();
-
         Tile startingTile = tiles.stream()
                 .filter(tile -> tile.pipeDirection == PipeDirection.START)
                 .findAny()
                 .orElseThrow();
         loopTiles.add(startingTile);
 
-        Set<WalkResult> currentTiles = new HashSet<>();
-
+        WalkResult currentTile = null;
         for (Direction direction : Direction.values()) {
             try {
-                WalkResult tmpTile = startingTile.getNext(direction, tiles);
-                if (tmpTile.newTile.getPrevious(tmpTile.direction, tiles).equals(startingTile)) {
-                    currentTiles.add(tmpTile);
-                    loopTiles.add(tmpTile.newTile);
-                }
-            } catch (NoSuchElementException | IllegalStateException ignored) {
+                WalkResult tmpTile = startingTile.getNext(direction);
+                currentTile = tmpTile;
+                loopTiles.add(tmpTile.newTile);
+                tiles.remove(tmpTile.newTile);
+                break;
+            } catch (NoSuchElementException ignored) {
             }
         }
-        if (currentTiles.size() != 2) {
+        if (currentTile == null) {
             throw new IllegalStateException();
         }
+        tiles.remove(startingTile);
 
+        int position = 1;
         do {
-            currentTiles = currentTiles.stream()
-                    .map(walkResult -> walkResult.newTile.getNext(walkResult.direction, tiles))
-                    .peek(walkResult -> loopTiles.add(walkResult.newTile))
-                    .collect(Collectors.toSet());
-        } while (currentTiles.size() == 2);
+            currentTile = currentTile.newTile.getNext(currentTile.direction);
+            loopTiles.add(currentTile.newTile);
+            position++;
+        } while (!currentTile.newTile.equals(startingTile));
+        return new Part1Result(position / 2, loopTiles);
+    }
 
+    public static long part2(Set<Tile> loopTiles) {
         int pixelAmount = 140 * 3;
 
         List<StringBuilder> output = new ArrayList<>();
         IntStream.range(0, pixelAmount).forEach(x -> output.add(new StringBuilder(".".repeat(pixelAmount))));
 
         loopTiles.forEach(tile -> {
-            switch (tile.pipeDirection) {
-                case UP_DOWN -> {
-                    output.get(3 * tile.i - 1).setCharAt(3 * tile.j, '|');
-                    output.get(3 * tile.i).setCharAt(3 * tile.j, '|');
-                    output.get(3 * tile.i + 1).setCharAt(3 * tile.j, '|');
-                }
-                case LEFT_RIGHT -> output.get(3 * tile.i).replace(3 * tile.j - 1, 3 * tile.j + 2, "---");
-                case UP_RIGHT -> {
-                    output.get(3 * tile.i - 1).setCharAt(3 * tile.j, '|');
-                    output.get(3 * tile.i).replace(3 * tile.j, 3 * tile.j + 2, "└-");
-                }
-                case UP_LEFT -> {
-                    output.get(3 * tile.i - 1).setCharAt(3 * tile.j, '|');
-                    output.get(3 * tile.i).replace(3 * tile.j - 1, 3 * tile.j + 1, "-┘");
-                }
-                case DOWN_RIGHT -> {
-                    output.get(3 * tile.i).replace(3 * tile.j, 3 * tile.j + 2, "┌-");
-                    output.get(3 * tile.i + 1).setCharAt(3 * tile.j, '|');
-                }
-                case DOWN_LEFT -> {
-                    output.get(3 * tile.i).replace(3 * tile.j - 1, 3 * tile.j + 1, "-┐");
-                    output.get(3 * tile.i + 1).setCharAt(3 * tile.j, '|');
-                }
-                case START -> {
-                    output.get(3 * tile.i - 1).setCharAt(3 * tile.j, '|');
-                    output.get(3 * tile.i).setCharAt(3 * tile.j, 'S');
-                    output.get(3 * tile.i + 1).setCharAt(3 * tile.j, '|');
-                }
-            }
+            output.get(3 * tile.i).setCharAt(3 * tile.j, tile.pipeDirection.middleSign);
+            if (tile.pipeDirection.up) output.get(3 * tile.i - 1).setCharAt(3 * tile.j, '|');
+            if (tile.pipeDirection.down) output.get(3 * tile.i + 1).setCharAt(3 * tile.j, '|');
+            if (tile.pipeDirection.left) output.get(3 * tile.i).setCharAt(3 * tile.j - 1, '-');
+            if (tile.pipeDirection.right) output.get(3 * tile.i).setCharAt(3 * tile.j + 1, '-');
         });
 
+        IntStream.range(0, pixelAmount)
+                .forEach(i -> {
+                    if (output.get(0).charAt(i) == '.')
+                        output.get(0).setCharAt(i, ' ');
+                    if (output.get(pixelAmount - 1).charAt(i) == '.')
+                        output.get(pixelAmount - 1).setCharAt(i, ' ');
+                    if (output.get(i).charAt(0) == '.')
+                        output.get(i).setCharAt(0, ' ');
+                    if (output.get(i).charAt(pixelAmount - 1) == '.')
+                        output.get(i).setCharAt(pixelAmount - 1, ' ');
+                });
+
+        Queue<Coords> toCheck = new LinkedList<>();
         for (int i = 0; i < pixelAmount; i++) {
-            if (output.get(0).charAt(i) == '.')
-                output.get(0).setCharAt(i, ' ');
-            if (output.get(pixelAmount - 1).charAt(i) == '.')
-                output.get(pixelAmount - 1).setCharAt(i, ' ');
-            if (output.get(i).charAt(0) == '.')
-                output.get(i).setCharAt(0, ' ');
-            if (output.get(i).charAt(pixelAmount - 1) == '.')
-                output.get(i).setCharAt(pixelAmount - 1, ' ');
-        }
-
-        boolean changed;
-        do {
-            changed = false;
-            for (int i = 1; i < pixelAmount - 1; i++) {
-                for (int j = 1; j < pixelAmount - 1; j++) {
-                    if (output.get(i).charAt(j) == '.' && (
-                            output.get(i - 1).charAt(j) == ' ' ||
-                            output.get(i + 1).charAt(j) == ' ' ||
-                            output.get(i).charAt(j - 1) == ' ' ||
-                            output.get(i).charAt(j + 1) == ' ')) {
-                        output.get(i).setCharAt(j, ' ');
-                        changed = true;
-                    }
-                }
-            }
-        } while (changed);
-
-        for (int i = 0; i < pixelAmount ; i++) {
             for (int j = 0; j < pixelAmount; j++) {
-                if (output.get(i).charAt(j) == '.' && (
-                        output.get(i - 1).charAt(j) == '-' ||
-                        output.get(i + 1).charAt(j) == '-' ||
-                        output.get(i - 1).charAt(j) == '└' ||
-                        output.get(i).charAt(j + 1) == '└' ||
-                        output.get(i - 1).charAt(j + 1) == '└' ||
-                        output.get(i - 1).charAt(j) == '┘' ||
-                        output.get(i).charAt(j - 1) == '┘' ||
-                        output.get(i - 1).charAt(j - 1) == '┘' ||
-                        output.get(i + 1).charAt(j) == '┌' ||
-                        output.get(i).charAt(j + 1) == '┌' ||
-                        output.get(i + 1).charAt(j + 1) == '┌' ||
-                        output.get(i + 1).charAt(j) == '┐' ||
-                        output.get(i).charAt(j - 1) == '┐' ||
-                        output.get(i + 1).charAt(j - 1) == '┐' ||
-                        output.get(i).charAt(j + 1) == '|' ||
-                        output.get(i).charAt(j - 1) == '|' ||
-                        output.get(i).charAt(j + 1) == 'S' ||
-                        output.get(i).charAt(j - 1) == 'S')) {
-                    output.get(i).setCharAt(j, ' ');
+                if (output.get(i).charAt(j) == ' ')
+                    toCheck.add(new Coords(i, j));
+            }
+        }
+        while (!toCheck.isEmpty()) {
+            Coords coords = toCheck.remove();
+            for (int x = -1; x <= 1; x += 2) {
+                if (coords.i + x >= 0 && coords.i + x < pixelAmount && output.get(coords.i + x).charAt(coords.j) == '.') {
+                    output.get(coords.i + x).setCharAt(coords.j, ' ');
+                    toCheck.add(new Coords(coords.i + x, coords.j));
+                }
+                if (coords.j + x >= 0 && coords.j + x < pixelAmount && output.get(coords.i).charAt(coords.j + x) == '.') {
+                    output.get(coords.i).setCharAt(coords.j + x, ' ');
+                    toCheck.add(new Coords(coords.i, coords.j + x));
                 }
             }
         }
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("Day10-input-pixels.txt"))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("Day10-input-big.txt"))) {
             output.forEach(stringBuilder -> {
                 try {
                     writer.write(stringBuilder + "\n");
@@ -198,27 +129,83 @@ public class Day10 {
             throw new RuntimeException(e);
         }
 
-        return output.stream()
-                .flatMap(stringBuilder -> stringBuilder.chars().mapToObj(ch -> (char) ch))
-                .filter(ch -> ch == '.')
-                .count() / 9;
+        List<StringBuilder> smallOutput = new ArrayList<>();
+        IntStream.range(0, 140).forEach(x -> smallOutput.add(new StringBuilder(140)));
+
+        for (int i = 0; i < output.size(); i += 3) {
+            for (int j = 0; j < output.get(i).length(); j += 3) {
+                smallOutput.get(i / 3).append(output.get(i).charAt(j));
+            }
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("Day10-input-small.txt"))) {
+            smallOutput.forEach(stringBuilder -> {
+                try {
+                    writer.write(stringBuilder + "\n");
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return smallOutput.stream()
+                .mapToLong(line -> line.chars()
+                        .filter(ch -> ch == '.')
+                        .count())
+                .sum();
     }
 
     public enum PipeDirection {
-        UP_DOWN,
-        LEFT_RIGHT,
-        UP_RIGHT,
-        UP_LEFT,
-        DOWN_RIGHT,
-        DOWN_LEFT,
-        START
+        UP_DOWN('|', true, true, false, false),
+        LEFT_RIGHT('-', false, false, true, true),
+        UP_RIGHT('└', true, false, false, true),
+        UP_LEFT('┘', true, false, true, false),
+        DOWN_RIGHT('┌', false, true, false, true),
+        DOWN_LEFT('┐', false, true, true, false),
+        START('S', true, true, true, true);
+
+        public final boolean up, down, left, right;
+        public final char middleSign;
+
+        PipeDirection(char middleSign, boolean up, boolean down, boolean left, boolean right) {
+            this.middleSign = middleSign;
+            this.up = up;
+            this.down = down;
+            this.left = left;
+            this.right = right;
+        }
+
+        public static PipeDirection create(String code) {
+            return switch (code) {
+                case "|" -> PipeDirection.UP_DOWN;
+                case "-" -> PipeDirection.LEFT_RIGHT;
+                case "L" -> PipeDirection.UP_RIGHT;
+                case "J" -> PipeDirection.UP_LEFT;
+                case "7" -> PipeDirection.DOWN_LEFT;
+                case "F" -> PipeDirection.DOWN_RIGHT;
+                case "S" -> PipeDirection.START;
+                default -> throw new IllegalStateException();
+            };
+        }
     }
 
     public enum Direction {
         UP,
         DOWN,
         LEFT,
-        RIGHT
+        RIGHT;
+
+        public Direction reverse() {
+            return this == UP ? DOWN : (this == DOWN ? UP : (this == LEFT ? RIGHT : LEFT));
+        }
+    }
+
+    public record Coords(int i, int j) {
+    }
+
+    public record Part1Result(long answer, Set<Tile> loop) {
     }
 
     public record WalkResult(Tile newTile, Direction direction) {
@@ -240,166 +227,67 @@ public class Day10 {
         public final int i;
         public final int j;
         public final PipeDirection pipeDirection;
+        private final Map<Direction, Tile> connections = new HashMap<>();
 
         public Tile(int i, int j, String pipeDirection) {
             this.i = i;
             this.j = j;
-            this.pipeDirection = switch (pipeDirection) {
-                case "|" -> PipeDirection.UP_DOWN;
-                case "-" -> PipeDirection.LEFT_RIGHT;
-                case "L" -> PipeDirection.UP_RIGHT;
-                case "J" -> PipeDirection.UP_LEFT;
-                case "7" -> PipeDirection.DOWN_LEFT;
-                case "F" -> PipeDirection.DOWN_RIGHT;
-                case "S" -> PipeDirection.START;
-                default -> throw new IllegalStateException();
-            };
+            this.pipeDirection = PipeDirection.create(pipeDirection);
         }
 
-        public Tile getPrevious(Direction inputDirection, List<Tile> tiles) {
-            int wantedI = -1;
-            int wantedJ = -1;
-            switch (inputDirection) {
-                case UP -> {
-                    switch (pipeDirection) {
-                        case UP_DOWN, DOWN_LEFT, DOWN_RIGHT -> {
-                            wantedI = i + 1;
-                            wantedJ = j;
-                        }
-                    }
-                }
-                case DOWN -> {
-                    switch (pipeDirection) {
-                        case UP_DOWN, UP_LEFT, UP_RIGHT -> {
-                            wantedI = i - 1;
-                            wantedJ = j;
-                        }
-                    }
-                }
-                case LEFT -> {
-                    switch (pipeDirection) {
-                        case LEFT_RIGHT, UP_RIGHT, DOWN_RIGHT -> {
-                            wantedI = i;
-                            wantedJ = j + 1;
-                        }
-                    }
-                }
-                case RIGHT -> {
-                    switch (pipeDirection) {
-                        case LEFT_RIGHT, UP_LEFT, DOWN_LEFT -> {
-                            wantedI = i;
-                            wantedJ = j - 1;
-                        }
-                    }
-                }
+        public void initializeConnections(Map<Coords, Tile> tiles) {
+            switch (pipeDirection) {
+                case UP_DOWN, UP_LEFT, UP_RIGHT -> Optional.ofNullable(tiles.get(new Coords(i - 1, j)))
+                        .ifPresent(tile -> connections.put(Direction.UP, tile));
             }
-            if (wantedJ == -1)
-                throw new IllegalStateException();
-            int finalWantedI = wantedI;
-            int finalWantedJ = wantedJ;
-            return tiles.stream()
-                    .filter(tile -> tile.i == finalWantedI)
-                    .filter(tile -> tile.j == finalWantedJ)
-                    .findFirst()
+            switch (pipeDirection) {
+                case UP_DOWN, DOWN_LEFT, DOWN_RIGHT -> Optional.ofNullable(tiles.get(new Coords(i + 1, j)))
+                        .ifPresent(tile -> connections.put(Direction.DOWN, tile));
+            }
+            switch (pipeDirection) {
+                case LEFT_RIGHT, UP_LEFT, DOWN_LEFT -> Optional.ofNullable(tiles.get(new Coords(i, j - 1)))
+                        .ifPresent(tile -> connections.put(Direction.LEFT, tile));
+            }
+            switch (pipeDirection) {
+                case LEFT_RIGHT, UP_RIGHT, DOWN_RIGHT -> Optional.ofNullable(tiles.get(new Coords(i, j + 1)))
+                        .ifPresent(tile -> connections.put(Direction.RIGHT, tile));
+            }
+            if (pipeDirection == PipeDirection.START) {
+                Optional.ofNullable(tiles.get(new Coords(i - 1, j)))
+                        .filter(tile -> tile.pipeDirection == PipeDirection.UP_DOWN ||
+                                        tile.pipeDirection == PipeDirection.DOWN_LEFT ||
+                                        tile.pipeDirection == PipeDirection.DOWN_RIGHT)
+                        .ifPresent(tile -> connections.put(Direction.UP, tile));
+                Optional.ofNullable(tiles.get(new Coords(i + 1, j)))
+                        .filter(tile -> tile.pipeDirection == PipeDirection.UP_DOWN ||
+                                        tile.pipeDirection == PipeDirection.UP_LEFT ||
+                                        tile.pipeDirection == PipeDirection.UP_RIGHT)
+                        .ifPresent(tile -> connections.put(Direction.DOWN, tile));
+                Optional.ofNullable(tiles.get(new Coords(i, j - 1)))
+                        .filter(tile -> tile.pipeDirection == PipeDirection.LEFT_RIGHT ||
+                                        tile.pipeDirection == PipeDirection.DOWN_RIGHT ||
+                                        tile.pipeDirection == PipeDirection.UP_RIGHT)
+                        .ifPresent(tile -> connections.put(Direction.LEFT, tile));
+                Optional.ofNullable(tiles.get(new Coords(i, j + 1)))
+                        .filter(tile -> tile.pipeDirection == PipeDirection.LEFT_RIGHT ||
+                                        tile.pipeDirection == PipeDirection.DOWN_LEFT ||
+                                        tile.pipeDirection == PipeDirection.UP_LEFT)
+                        .ifPresent(tile -> connections.put(Direction.RIGHT, tile));
+            }
+        }
+
+        public WalkResult getNext(Direction inputDirection) {
+            return connections.entrySet()
+                    .stream()
+                    .filter(entry -> entry.getKey() != inputDirection)
+                    .findAny()
+                    .map(entry -> new WalkResult(entry.getValue(), entry.getKey().reverse()))
                     .orElseThrow();
-        }
-
-        public WalkResult getNext(Direction inputDirection, List<Tile> tiles) {
-            int wantedI = -1;
-            int wantedJ = -1;
-            Direction direction = null;
-            switch (inputDirection) {
-                case UP -> {
-                    switch (pipeDirection) {
-                        case UP_DOWN, START -> {
-                            wantedI = i - 1;
-                            wantedJ = j;
-                            direction = Direction.UP;
-                        }
-                        case DOWN_LEFT -> {
-                            wantedI = i;
-                            wantedJ = j - 1;
-                            direction = Direction.LEFT;
-                        }
-                        case DOWN_RIGHT -> {
-                            wantedI = i;
-                            wantedJ = j + 1;
-                            direction = Direction.RIGHT;
-                        }
-                    }
-                }
-                case DOWN -> {
-                    switch (pipeDirection) {
-                        case UP_DOWN, START -> {
-                            wantedI = i + 1;
-                            wantedJ = j;
-                            direction = Direction.DOWN;
-                        }
-                        case UP_LEFT -> {
-                            wantedI = i;
-                            wantedJ = j - 1;
-                            direction = Direction.LEFT;
-                        }
-                        case UP_RIGHT -> {
-                            wantedI = i;
-                            wantedJ = j + 1;
-                            direction = Direction.RIGHT;
-                        }
-                    }
-                }
-                case LEFT -> {
-                    switch (pipeDirection) {
-                        case LEFT_RIGHT, START -> {
-                            wantedI = i;
-                            wantedJ = j - 1;
-                            direction = Direction.LEFT;
-                        }
-                        case UP_RIGHT -> {
-                            wantedI = i - 1;
-                            wantedJ = j;
-                            direction = Direction.UP;
-                        }
-                        case DOWN_RIGHT -> {
-                            wantedI = i + 1;
-                            wantedJ = j;
-                            direction = Direction.DOWN;
-                        }
-                    }
-                }
-                case RIGHT -> {
-                    switch (pipeDirection) {
-                        case LEFT_RIGHT, START -> {
-                            wantedI = i;
-                            wantedJ = j + 1;
-                            direction = Direction.RIGHT;
-                        }
-                        case UP_LEFT -> {
-                            wantedI = i - 1;
-                            wantedJ = j;
-                            direction = Direction.UP;
-                        }
-                        case DOWN_LEFT -> {
-                            wantedI = i + 1;
-                            wantedJ = j;
-                            direction = Direction.DOWN;
-                        }
-                    }
-                }
-            }
-            if (wantedJ == -1)
-                throw new IllegalStateException();
-            int finalWantedI = wantedI;
-            int finalWantedJ = wantedJ;
-            return new WalkResult(tiles.stream()
-                    .filter(tile -> tile.i == finalWantedI)
-                    .filter(tile -> tile.j == finalWantedJ)
-                    .findFirst()
-                    .orElseThrow(), direction);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(i, j);
+            return i + j << 16;
         }
 
         @Override
