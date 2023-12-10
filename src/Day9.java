@@ -13,8 +13,8 @@ public class Day9 {
         try (BufferedReader reader = new BufferedReader(new FileReader("Day9-input.txt"))) {
             input = parseInput(reader.lines());
         }
-        System.out.println(part1(input)); // 1898776583
-        System.out.println(part2(input)); // 1100
+        System.out.println(part1(input));
+        System.out.println(part2(input));
     }
 
     public static List<List<Integer>> parseInput(Stream<String> lines) {
