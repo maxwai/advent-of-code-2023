@@ -1,8 +1,7 @@
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class Day10 {
@@ -33,21 +32,19 @@ public class Day10 {
     }
 
     public static long part1(List<Tile> tiles) {
-        List<Tile> localTiles = new ArrayList<>(tiles);
 
-        Tile startingTile = localTiles.stream()
-                                    .filter(tile -> tile.pipeDirection == PipeDirection.START)
-                                    .findAny()
-                                    .orElseThrow();
+        Tile startingTile = tiles.stream()
+                .filter(tile -> tile.pipeDirection == PipeDirection.START)
+                .findAny()
+                .orElseThrow();
 
         Set<WalkResult> currentTiles = new HashSet<>();
 
         for (Direction direction : Direction.values()) {
             try {
-                WalkResult tmpTile = startingTile.getNext(direction, localTiles);
-                if (tmpTile.newTile.getPrevious(tmpTile.direction, localTiles).equals(startingTile)) {
+                WalkResult tmpTile = startingTile.getNext(direction, tiles);
+                if (tmpTile.newTile.getPrevious(tmpTile.direction, tiles).equals(startingTile)) {
                     currentTiles.add(tmpTile);
-                    localTiles.remove(tmpTile.newTile);
                 }
             } catch (NoSuchElementException | IllegalStateException ignored) {
             }
@@ -56,20 +53,155 @@ public class Day10 {
             throw new IllegalStateException();
         }
 
-        localTiles.remove(startingTile);
         int position = 1;
         do {
             currentTiles = currentTiles.stream()
-                    .map(walkResult -> walkResult.newTile.getNext(walkResult.direction, localTiles))
+                    .map(walkResult -> walkResult.newTile.getNext(walkResult.direction, tiles))
                     .collect(Collectors.toSet());
-            currentTiles.forEach(walkResult -> localTiles.remove(walkResult.newTile));
             position++;
         } while (currentTiles.size() == 2);
         return position;
     }
 
     public static long part2(List<Tile> tiles) {
-        return 0;
+        Set<Tile> loopTiles = new HashSet<>();
+
+        Tile startingTile = tiles.stream()
+                .filter(tile -> tile.pipeDirection == PipeDirection.START)
+                .findAny()
+                .orElseThrow();
+        loopTiles.add(startingTile);
+
+        Set<WalkResult> currentTiles = new HashSet<>();
+
+        for (Direction direction : Direction.values()) {
+            try {
+                WalkResult tmpTile = startingTile.getNext(direction, tiles);
+                if (tmpTile.newTile.getPrevious(tmpTile.direction, tiles).equals(startingTile)) {
+                    currentTiles.add(tmpTile);
+                    loopTiles.add(tmpTile.newTile);
+                }
+            } catch (NoSuchElementException | IllegalStateException ignored) {
+            }
+        }
+        if (currentTiles.size() != 2) {
+            throw new IllegalStateException();
+        }
+
+        do {
+            currentTiles = currentTiles.stream()
+                    .map(walkResult -> walkResult.newTile.getNext(walkResult.direction, tiles))
+                    .peek(walkResult -> loopTiles.add(walkResult.newTile))
+                    .collect(Collectors.toSet());
+        } while (currentTiles.size() == 2);
+
+        int pixelAmount = 140 * 3;
+
+        List<StringBuilder> output = new ArrayList<>();
+        IntStream.range(0, pixelAmount).forEach(x -> output.add(new StringBuilder(".".repeat(pixelAmount))));
+
+        loopTiles.forEach(tile -> {
+            switch (tile.pipeDirection) {
+                case UP_DOWN -> {
+                    output.get(3 * tile.i - 1).setCharAt(3 * tile.j, '|');
+                    output.get(3 * tile.i).setCharAt(3 * tile.j, '|');
+                    output.get(3 * tile.i + 1).setCharAt(3 * tile.j, '|');
+                }
+                case LEFT_RIGHT -> output.get(3 * tile.i).replace(3 * tile.j - 1, 3 * tile.j + 2, "---");
+                case UP_RIGHT -> {
+                    output.get(3 * tile.i - 1).setCharAt(3 * tile.j, '|');
+                    output.get(3 * tile.i).replace(3 * tile.j, 3 * tile.j + 2, "└-");
+                }
+                case UP_LEFT -> {
+                    output.get(3 * tile.i - 1).setCharAt(3 * tile.j, '|');
+                    output.get(3 * tile.i).replace(3 * tile.j - 1, 3 * tile.j + 1, "-┘");
+                }
+                case DOWN_RIGHT -> {
+                    output.get(3 * tile.i).replace(3 * tile.j, 3 * tile.j + 2, "┌-");
+                    output.get(3 * tile.i + 1).setCharAt(3 * tile.j, '|');
+                }
+                case DOWN_LEFT -> {
+                    output.get(3 * tile.i).replace(3 * tile.j - 1, 3 * tile.j + 1, "-┐");
+                    output.get(3 * tile.i + 1).setCharAt(3 * tile.j, '|');
+                }
+                case START -> {
+                    output.get(3 * tile.i - 1).setCharAt(3 * tile.j, '|');
+                    output.get(3 * tile.i).setCharAt(3 * tile.j, 'S');
+                    output.get(3 * tile.i + 1).setCharAt(3 * tile.j, '|');
+                }
+            }
+        });
+
+        for (int i = 0; i < pixelAmount; i++) {
+            if (output.get(0).charAt(i) == '.')
+                output.get(0).setCharAt(i, ' ');
+            if (output.get(pixelAmount - 1).charAt(i) == '.')
+                output.get(pixelAmount - 1).setCharAt(i, ' ');
+            if (output.get(i).charAt(0) == '.')
+                output.get(i).setCharAt(0, ' ');
+            if (output.get(i).charAt(pixelAmount - 1) == '.')
+                output.get(i).setCharAt(pixelAmount - 1, ' ');
+        }
+
+        boolean changed;
+        do {
+            changed = false;
+            for (int i = 1; i < pixelAmount - 1; i++) {
+                for (int j = 1; j < pixelAmount - 1; j++) {
+                    if (output.get(i).charAt(j) == '.' && (
+                            output.get(i - 1).charAt(j) == ' ' ||
+                            output.get(i + 1).charAt(j) == ' ' ||
+                            output.get(i).charAt(j - 1) == ' ' ||
+                            output.get(i).charAt(j + 1) == ' ')) {
+                        output.get(i).setCharAt(j, ' ');
+                        changed = true;
+                    }
+                }
+            }
+        } while (changed);
+
+        for (int i = 0; i < pixelAmount ; i++) {
+            for (int j = 0; j < pixelAmount; j++) {
+                if (output.get(i).charAt(j) == '.' && (
+                        output.get(i - 1).charAt(j) == '-' ||
+                        output.get(i + 1).charAt(j) == '-' ||
+                        output.get(i - 1).charAt(j) == '└' ||
+                        output.get(i).charAt(j + 1) == '└' ||
+                        output.get(i - 1).charAt(j + 1) == '└' ||
+                        output.get(i - 1).charAt(j) == '┘' ||
+                        output.get(i).charAt(j - 1) == '┘' ||
+                        output.get(i - 1).charAt(j - 1) == '┘' ||
+                        output.get(i + 1).charAt(j) == '┌' ||
+                        output.get(i).charAt(j + 1) == '┌' ||
+                        output.get(i + 1).charAt(j + 1) == '┌' ||
+                        output.get(i + 1).charAt(j) == '┐' ||
+                        output.get(i).charAt(j - 1) == '┐' ||
+                        output.get(i + 1).charAt(j - 1) == '┐' ||
+                        output.get(i).charAt(j + 1) == '|' ||
+                        output.get(i).charAt(j - 1) == '|' ||
+                        output.get(i).charAt(j + 1) == 'S' ||
+                        output.get(i).charAt(j - 1) == 'S')) {
+                    output.get(i).setCharAt(j, ' ');
+                }
+            }
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("Day10-input-pixels.txt"))) {
+            output.forEach(stringBuilder -> {
+                try {
+                    writer.write(stringBuilder + "\n");
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return output.stream()
+                .flatMap(stringBuilder -> stringBuilder.chars().mapToObj(ch -> (char) ch))
+                .filter(ch -> ch == '.')
+                .count() / 9;
     }
 
     public enum PipeDirection {
@@ -86,7 +218,7 @@ public class Day10 {
         UP,
         DOWN,
         LEFT,
-        RIGHT;
+        RIGHT
     }
 
     public record WalkResult(Tile newTile, Direction direction) {
