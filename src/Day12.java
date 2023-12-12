@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class Day12 {
@@ -14,8 +13,8 @@ public class Day12 {
         try (BufferedReader reader = new BufferedReader(new FileReader("Day12-input.txt"))) {
             input = parseInput(reader.lines());
         }
-        System.out.println(part1(input));
-        System.out.println(part2(input));
+        System.out.println(part1(input)); // 7622
+        System.out.println(part2(input)); // 4964259839627
     }
 
     public static List<Line> parseInput(Stream<String> lines) {
@@ -94,45 +93,6 @@ public class Day12 {
             }
         }
         throw new IllegalStateException();
-    }
-
-    public static long getEveryPossibility(String line, Pattern patternWildcard, Pattern pattern) {
-        Queue<String> queue = new LinkedList<>();
-        queue.add(line);
-        long sum = 0;
-        int max_queue_size = 0;
-        while (!queue.isEmpty()) {
-            max_queue_size = Math.max(queue.size(), max_queue_size);
-            line = queue.remove();
-            if (!line.contains("?") || pattern.matcher(line).find()) {
-                sum += patternWildcard.matcher(line).find() ? 1 : 0;
-            } else {
-                String tmpString = line.replaceFirst("\\?", "#");
-                if (patternWildcard.matcher(tmpString).find())
-                    queue.add(tmpString);
-                tmpString = line.replaceFirst("\\?", ".");
-                if (patternWildcard.matcher(tmpString).find())
-                    queue.add(tmpString);
-            }
-        }
-        System.out.println(max_queue_size);
-        return sum;
-    }
-
-    public static Pattern getPatternWildcard(List<Integer> numbers) {
-        StringBuilder pattern = new StringBuilder("^[\\.?]*");
-        numbers.forEach(number -> pattern.append("[#?]{").append(number).append("}[\\.?]+"));
-        pattern.deleteCharAt(pattern.length() - 1).append("*$");
-        return Pattern.compile(pattern.toString());
-    }
-
-    public static Pattern getPattern(List<Integer> numbers) {
-        StringBuilder pattern = new StringBuilder("^(([\\.?]*");
-        numbers.forEach(number -> pattern.append("#{").append(number).append("}[\\.?]+"));
-        pattern.deleteCharAt(pattern.length() - 1).append("*)|(\\.*");
-        numbers.forEach(number -> pattern.append("[#?]{").append(number).append("}\\.+"));
-        pattern.deleteCharAt(pattern.length() - 1).append("*))$");
-        return Pattern.compile(pattern.toString());
     }
 
     public record CallArguments(String line, List<Integer> numbers, int currentPatterSize) {
