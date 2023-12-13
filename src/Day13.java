@@ -13,8 +13,8 @@ public class Day13 {
         try (BufferedReader reader = new BufferedReader(new FileReader("Day13-input.txt"))) {
             input = parseInput(reader.lines());
         }
-        System.out.println(part1(input));
-        System.out.println(part2(input));
+        System.out.println(part1(input)); // 37975
+        System.out.println(part2(input)); // 32497
     }
 
     public static List<List<List<Character>>> parseInput(Stream<String> lines) {
@@ -32,15 +32,25 @@ public class Day13 {
 
     public static long part1(List<List<List<Character>>> patches) {
         AtomicLong sum = new AtomicLong();
-        patches.forEach(patch -> sum.addAndGet(100L * getReflectionLine(patch, 0)));
-        rotatePatches(patches).forEach(patch -> sum.addAndGet(getReflectionLine(patch, 0)));
+        List<List<List<Character>>> rotatedPatches = rotatePatches(patches);
+        for (int i = 0; i < patches.size(); i++) {
+            long result = 100L * getReflectionLine(patches.get(i), 0);
+            if (result == 0)
+                result = getReflectionLine(rotatedPatches.get(i), 0);
+            sum.addAndGet(result);
+        }
         return sum.get();
     }
 
     public static long part2(List<List<List<Character>>> patches) {
         AtomicLong sum = new AtomicLong();
-        patches.forEach(patch -> sum.addAndGet(100L * getReflectionLine(patch, 1)));
-        rotatePatches(patches).forEach(patch -> sum.addAndGet(getReflectionLine(patch, 1)));
+        List<List<List<Character>>> rotatedPatches = rotatePatches(patches);
+        for (int i = 0; i < patches.size(); i++) {
+            long result = 100L * getReflectionLine(patches.get(i), 1);
+            if (result == 0)
+                result = getReflectionLine(rotatedPatches.get(i), 1);
+            sum.addAndGet(result);
+        }
         return sum.get();
     }
 
