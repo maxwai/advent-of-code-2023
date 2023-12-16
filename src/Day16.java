@@ -1,7 +1,10 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -23,77 +26,102 @@ public class Day16 {
     }
 
     public static long part1(List<StringBuilder> contraption) {
-        return tryFromLocation(contraption, 0, -1, 1);
+        return tryFromLocation(contraption, 0, -1, Direction.RIGHT);
     }
 
     public static long part2(List<StringBuilder> contraption) {
         return IntStream.range(0, contraption.size())
-                .mapToLong(i -> Math.max(tryFromLocation(contraption, -1, i, 3),
-                        Math.max(tryFromLocation(contraption, contraption.size(), i, 2),
-                                Math.max(tryFromLocation(contraption, i, -1, 1),
-                                        tryFromLocation(contraption, i, contraption.size(), 0)))))
+                .parallel()
+                .mapToLong(i -> Math.max(tryFromLocation(contraption, -1, i, Direction.DOWN),
+                        Math.max(tryFromLocation(contraption, contraption.size(), i, Direction.UP),
+                                Math.max(tryFromLocation(contraption, i, -1, Direction.RIGHT),
+                                        tryFromLocation(contraption, i, contraption.size(), Direction.LEFT)))))
                 .max()
                 .orElse(-1);
     }
 
-    private static long tryFromLocation(List<StringBuilder> contraption, int x, int y, int dir) {
+    private static long tryFromLocation(List<StringBuilder> contraption, int x, int y, Direction dir) {
         Set<Beam> beams = new HashSet<>();
         Set<Beam> seen = new HashSet<>();
-        Boolean[][] energized = new Boolean[contraption.size()][contraption.get(0).length()];
-        beams.add(new Beam(x, y, dir));
+        Set<Coords> energized = new HashSet<>();
+        beams.add(new Beam(new Coords(x, y), dir));
         while (!beams.isEmpty()) {
-            beams = helper(contraption, energized, beams, seen);
-        }
-        return totalEnergized(energized);
-    }
-
-    private static long totalEnergized(Boolean[][] energized) {
-        return Arrays.stream(energized)
-                .flatMap(Arrays::stream)
-                .filter(Objects::nonNull)
-                .filter(b -> b)
-                .count();
-    }
-
-    private static Set<Beam> helper(List<StringBuilder> contraption, Boolean[][] energized, Set<Beam> beams, Set<Beam> seen) {
-        Set<Beam> newBeams = new HashSet<>();
-        int[] xs = new int[]{0, 0, -1, 1};
-        int[] ys = new int[]{-1, 1, 0, 0};
-        for (Beam beam : beams) {
-            int dir = beam.direction;
-            int newx = beam.x + xs[dir];
-            int newy = beam.y + ys[dir];
-            if (newx < 0 || newx >= contraption.size() || newy < 0 || newy >= contraption.get(0).length()) {
-                continue;
-            }
-            energized[newx][newy] = true;
-            switch (contraption.get(newx).charAt(newy)) {
-                case '.' -> newBeams.add(new Beam(newx, newy, dir));
-                case '/' -> newBeams.add(new Beam(newx, newy, 3 - dir));
-                case '\\' -> newBeams.add(new Beam(newx, newy, (dir + 2) % 4));
-                case '|' -> {
-                    if (dir >= 2) {
-                        newBeams.add(new Beam(newx, newy, dir));
-                    } else {
-                        newBeams.add(new Beam(newx, newy, 2));
-                        newBeams.add(new Beam(newx, newy, 3));
-                    }
+            Set<Beam> newBeams = new HashSet<>();
+            for (Beam beam : beams) {
+                int newx = beam.coords.x + beam.direction.xShift;
+                int newy = beam.coords.y + beam.direction.yShift;
+                Coords newCoords = new Coords(newx, newy);
+                if (newx < 0 || newx >= contraption.size() || newy < 0 || newy >= contraption.get(0).length()) {
+                    continue;
                 }
-                case '-' -> {
-                    if (dir < 2) {
-                        newBeams.add(new Beam(newx, newy, dir));
-                    } else {
-                        newBeams.add(new Beam(newx, newy, 0));
-                        newBeams.add(new Beam(newx, newy, 1));
+                energized.add(newCoords);
+                switch (contraption.get(newx).charAt(newy)) {
+                    case '.' -> newBeams.add(new Beam(newCoords, beam.direction));
+                    case '/' -> newBeams.add(new Beam(newCoords, beam.direction.mirror1()));
+                    case '\\' -> newBeams.add(new Beam(newCoords, beam.direction.mirror2()));
+                    case '|' -> {
+                        if (beam.direction.vertical) {
+                            newBeams.add(new Beam(newCoords, beam.direction));
+                        } else {
+                            newBeams.add(new Beam(newCoords, Direction.UP));
+                            newBeams.add(new Beam(newCoords, Direction.DOWN));
+                        }
+                    }
+                    case '-' -> {
+                        if (beam.direction.horizontal) {
+                            newBeams.add(new Beam(newCoords, beam.direction));
+                        } else {
+                            newBeams.add(new Beam(newCoords, Direction.LEFT));
+                            newBeams.add(new Beam(newCoords, Direction.RIGHT));
+                        }
                     }
                 }
             }
+            newBeams.removeAll(seen);
+            seen.addAll(newBeams);
+            beams = newBeams;
         }
-        newBeams.removeAll(seen);
-        seen.addAll(newBeams);
-        return newBeams;
+        return energized.size();
     }
 
-    public record Beam(int x, int y, int direction) {
+    public enum Direction {
+        LEFT(0, -1, true, false),
+        RIGHT(0, 1, true, false),
+        UP(-1, 0, false, true),
+        DOWN(1, 0, false, true);
+
+        public final int xShift, yShift;
+        public final boolean horizontal, vertical;
+
+        Direction(int xShift, int yShift, boolean horizontal, boolean vertical) {
+            this.xShift = xShift;
+            this.yShift = yShift;
+            this.horizontal = horizontal;
+            this.vertical = vertical;
+        }
+
+        public Direction mirror1() {
+            return switch (this) {
+                case LEFT -> DOWN;
+                case RIGHT -> UP;
+                case UP -> RIGHT;
+                case DOWN -> LEFT;
+            };
+        }
+
+        public Direction mirror2() {
+            return switch (this) {
+                case LEFT -> UP;
+                case RIGHT -> DOWN;
+                case UP -> LEFT;
+                case DOWN -> RIGHT;
+            };
+        }
+    }
+
+    public record Coords(int x, int y) {
+    }
+
+    public record Beam(Coords coords, Direction direction) {
     }
 }
