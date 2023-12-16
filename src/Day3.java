@@ -12,7 +12,7 @@ public class Day3 {
 
     public static void main(String[] args) throws IOException {
         List<List<Character>> input;
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day3-input.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("inputs/Day3-input.txt"))) {
             input = parseInput(reader.lines());
         }
         System.out.println(part1(input)); // 536576

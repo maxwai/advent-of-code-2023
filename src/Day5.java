@@ -12,10 +12,10 @@ public class Day5 {
         List<Map<Range, Range>> input;
         List<Long> seeds;
         List<Range> seedRanges;
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day5-input.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("inputs/Day5-input.txt"))) {
             input = parseInput(reader.lines());
         }
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day5-input.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("inputs/Day5-input.txt"))) {
             seeds = parseSeeds(reader.lines());
         }
         seedRanges = parseSeedRange(seeds);

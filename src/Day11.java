@@ -10,7 +10,7 @@ public class Day11 {
 
     public static void main(String[] args) throws IOException {
         List<List<Boolean>> input;
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day11-input.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("inputs/Day11-input.txt"))) {
             input = parseInput(reader.lines());
         }
         System.out.println(part1(input));

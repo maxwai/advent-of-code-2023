@@ -7,7 +7,7 @@ public class Day10 {
 
     public static void main(String[] args) throws IOException {
         List<Tile> input;
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day10-input.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("inputs/Day10-input.txt"))) {
             input = parseInput(reader.lines());
         }
         // 6738 & 579

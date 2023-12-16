@@ -13,7 +13,7 @@ public class Day8 {
     public static void main(String[] args) throws IOException {
         Map<String, Tree> input;
         List<Character> path;
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day8-input.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("inputs/Day8-input.txt"))) {
             path = new ArrayList<>(reader.readLine()
                     .chars()
                     .mapToObj(m -> (char) m)

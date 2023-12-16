@@ -8,7 +8,7 @@ public class Day15 {
 
     public static void main(String[] args) throws IOException {
         List<String> input;
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day15-input.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("inputs/Day15-input.txt"))) {
             input = parseInput(reader.lines());
         }
         System.out.println(part1(input));

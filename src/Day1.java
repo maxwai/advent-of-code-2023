@@ -7,10 +7,10 @@ import java.util.stream.Stream;
 public class Day1 {
 
     public static void main(String[] args) throws IOException {
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day1-input.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("inputs/Day1-input.txt"))) {
             System.out.println(part1(reader.lines()));
         }
-        try (BufferedReader reader = new BufferedReader(new FileReader("Day1-input.txt"))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("inputs/Day1-input.txt"))) {
             System.out.println(part2(reader.lines()));
         }
     }
