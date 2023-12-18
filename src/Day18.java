@@ -3,7 +3,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class Day18 {
@@ -27,11 +26,28 @@ public class Day18 {
     }
 
     public static long part1(List<Operation> operations) {
-        List<List<Character>> field = new ArrayList<>();
-        field.add(new ArrayList<>());
-        int x = 0;
-        int y = 0;
-        field.get(x).add(y, '#');
+        List<long[]> points = convertToPoints(operations);
+
+        // Gaußsche Trapezformel (Schnürsenkel-Schema)
+        long det = 0;
+        for (int i = 0; i < points.size(); i++) {
+            long[] p2 = points.get(i);
+            long[] p1 = points.get((i + 1) % points.size());
+            det += p1[0] * p2[1] - p1[1] * p2[0] + Math.abs(p1[0] - p2[0]) + Math.abs(p1[1] - p2[1]);
+        }
+        // Satz von Pick
+        return Math.abs(det) / 2 + 1;
+    }
+
+    public static long part2(List<Operation> operations) {
+        return part1(new ArrayList<>(operations.stream()
+                .map(operation -> new Operation(Direction.fromChar(operation.color.charAt(5)), Integer.parseInt(operation.color.substring(0, 5), 16), operation.color))
+                .toList()));
+    }
+
+    public static List<long[]> convertToPoints(List<Operation> operations) {
+        List<long[]> result = new ArrayList<>();
+        result.add(new long[]{0, 0});
         for (Operation operation : operations) {
             int dx, dy;
             dx = dy = 0;
@@ -41,63 +57,11 @@ public class Day18 {
                 case LEFT -> dy = -1;
                 case RIGHT -> dy = 1;
             }
-            for (int i = 0; i < operation.amount; i++) {
-                x += dx;
-                y += dy;
-                if (x < 0) {
-                    field.add(0, new ArrayList<>());
-                    x++;
-                } else if (x >= field.size()) {
-                    field.add(new ArrayList<>());
-                }
-                if (y < 0) {
-                    field.forEach(line -> line.add(0, ' '));
-                    y++;
-                }
-                while (y >= field.get(x).size()) {
-                    field.forEach(line -> line.add(' '));
-                }
-                field.get(x).set(y, '#');
-            }
+            long x = result.get(result.size() - 1)[0] + dx * operation.amount;
+            long y = result.get(result.size() - 1)[1] + dy * operation.amount;
+            result.add(new long[]{x, y});
         }
-        int fieldLength = field.stream()
-                .mapToInt(List::size)
-                .max()
-                .orElseThrow();
-
-        field.get(1).set(75, '.');
-
-        boolean changed;
-        do {
-            changed = false;
-            for (int i = 0; i < field.size(); i++) {
-                for (int j = 0; j < field.get(i).size(); j++) {
-                    if (field.get(i).get(j) == '.') {
-                        for (x = -1; x <= 1; x += 2) {
-                            if (i + x >= 0 && i + x < field.size() && field.get(i + x).get(j) == ' ') {
-                                field.get(i + x).set(j, '.');
-                                changed = true;
-                            }
-                            if (j + x >= 0 && j + x < field.get(i).size() && field.get(i).get(j + x) == ' ') {
-                                field.get(i).set(j + x, '.');
-                                changed = true;
-                            }
-                        }
-                    }
-                }
-            }
-        } while (changed);
-
-        field.stream()
-                .map(line -> line.stream()
-                        .map(ch -> "" + ch)
-                        .reduce("", (s, character) -> s + character))
-                .forEach(System.out::println);
-        return 0;
-    }
-
-    public static long part2(List<Operation> operations) {
-        return 0;
+        return result;
     }
 
     public enum Direction {
@@ -109,6 +73,16 @@ public class Day18 {
                 case "D" -> DOWN;
                 case "R" -> RIGHT;
                 case "L" -> LEFT;
+                default -> throw new IllegalStateException();
+            };
+        }
+
+        public static Direction fromChar(char direction) {
+            return switch (direction) {
+                case '3' -> UP;
+                case '1' -> DOWN;
+                case '0' -> RIGHT;
+                case '2' -> LEFT;
                 default -> throw new IllegalStateException();
             };
         }
