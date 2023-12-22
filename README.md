@@ -83,3 +83,7 @@ Circuit diagramm, loop finding and prediction
 ## Day 21 (Interesting)
 
 Walking possibilities and pattern finding
+
+## Day 22
+
+3D Tetris-Jenga
