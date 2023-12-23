@@ -87,3 +87,7 @@ Walking possibilities and pattern finding
 ## Day 22
 
 3D Tetris-Jenga
+
+## Day 23
+
+Graph reduction and longest Path search
