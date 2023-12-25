@@ -95,3 +95,7 @@ Graph reduction and longest Path search
 ## Day 24 (Interesting)
 
 Line Intersections in 2D and 3D. Usage of Z3 to solve the 3D Problem.
+
+## Day 25
+
+Cluster identification in Graph
